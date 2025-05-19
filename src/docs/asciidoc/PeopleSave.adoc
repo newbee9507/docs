@@ -1,0 +1,4 @@
+include::{snippets}/PeopleSave/http-request.adoc[]
+include::{snippets}/PeopleSave/http-response.adoc[]
+include::{snippets}/PeopleSave/request-body.adoc[]
+include::{snippets}/PeopleSave/response-body.adoc[]
