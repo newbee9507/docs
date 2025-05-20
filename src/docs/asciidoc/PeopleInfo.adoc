@@ -1,5 +1,1 @@
-include::{snippets}/PeopleInfo/http-request.adoc[]
-include::{snippets}/PeopleInfo/http-response.adoc[]
-include::{snippets}/PeopleInfo/response-body.adoc[]
-include::{snippets}/PeopleInfo/response-fields.adoc[]
-include::{snippets}/PeopleInfo/path-parameters.adoc[]
+operation::people-controller-test/info[]

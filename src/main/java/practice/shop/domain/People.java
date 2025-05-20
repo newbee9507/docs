@@ -2,6 +2,8 @@ package practice.shop.domain;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,11 +22,16 @@ public class People {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
+    @Size(min = 2)
     private String name;
+
+    @NotBlank
+    @Positive
     private Integer age;
 
     @NotBlank
-    @Column(length = 14)
+    @Column(length = 14, unique = true)
     private String personalNumber;
 
     @Override

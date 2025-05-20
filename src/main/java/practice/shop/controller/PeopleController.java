@@ -27,6 +27,6 @@ public class PeopleController {
     @PostMapping("/save")
     public ResponseEntity<People> save(@RequestBody @Valid PeopleDto dto){
         People newPeople = People.dtoToPeople(dto);
-        return new ResponseEntity<>(repository.save(newPeople), HttpStatus.OK);
+        return new ResponseEntity<>(repository.save(newPeople), HttpStatus.CREATED);
     }
 }

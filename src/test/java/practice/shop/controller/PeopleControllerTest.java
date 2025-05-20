@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.constraints.ConstraintDescriptions;
+import org.springframework.restdocs.mockmvc.RestDocumentationResultHandler;
 import org.springframework.restdocs.payload.FieldDescriptor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,7 +24,9 @@ import practice.shop.repository.PeopleRepository;
 import java.util.Optional;
 
 import static org.mockito.BDDMockito.*;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
@@ -35,6 +38,7 @@ import static org.springframework.restdocs.snippet.Attributes.key;
 class PeopleControllerTest {
 
     private MockMvc mockMvc;
+    private RestDocumentationResultHandler rh;
 
     @MockitoBean
     private PeopleQueryRepository QueryRepository;
@@ -48,8 +52,13 @@ class PeopleControllerTest {
 
     @BeforeEach
     void setMockMvc(WebApplicationContext wc, RestDocumentationContextProvider rc) {
+        this.rh = document("{class-name}/{method-name}",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()));
+
         this.mockMvc = MockMvcBuilders.webAppContextSetup(wc)
                 .apply(documentationConfiguration(rc))
+                .alwaysDo(this.rh)
                 .build();
     }
 
@@ -60,36 +69,46 @@ class PeopleControllerTest {
         mockMvc.perform(get("/api/people/info/{id}",1)
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.age").value(dto.getAge()))
-                .andExpect(jsonPath("$.personalNumber").value(dto.getPersonalNumber()))
+                .andExpect(jsonPath("$.data.age").value(dto.getAge()))
+                .andExpect(jsonPath("$.data.personalNumber").value(dto.getPersonalNumber()))
                 .andExpect(status().isOk())
-                .andDo(document("PeopleInfo",
+                .andDo(this.rh.document(
                         responseFields(
-                        fieldWithPath("id").description("DB id"),
-                        fieldWithPath("name").description("People's name"),
-                        fieldWithPath("age").description("People's age"),
-                        fieldWithPath("personalNumber").description("People's personalNumber")),
+                        fieldWithPath("data.id").description("DB id"),
+                        fieldWithPath("data.name").description("People's name"),
+                        fieldWithPath("data.age").description("People's age"),
+                        fieldWithPath("data.personalNumber").description("People's personalNumber"),
+                        fieldWithPath("status").description("Only SUCCESS Or ERROR"),
+                        fieldWithPath("time").description("Request Time in Korea Time")),
                         pathParameters(parameterWithName("id").description("DB Id"))));
     }
 
     @Test
     void save() throws Exception{
         People people = People.dtoToPeople(dto);
-        ConstrainedFields constrainedFields = new ConstrainedFields(PeopleDto.class);
+        ConstrainedFields requestConstrain = new ConstrainedFields(PeopleDto.class);
+        ConstrainedFields responseConstrain = new ConstrainedFields(People.class);
         given(repository.save(any())).willReturn(people);
 
         mockMvc.perform(post("/api/people/save")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(people)))
-                .andExpect(jsonPath("$.age").value(dto.getAge()))
-                .andExpect(jsonPath("$.personalNumber").value(dto.getPersonalNumber()))
-                .andExpect(status().isOk())
-                .andDo(document("PeopleSave"),
-                        requestFields(fieldWithPath("name").description("People's name"),
-                                fieldWithPath("name").description("People's name")
-                                fieldWithPath("name").description("People's name")));
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(jsonPath("$.data.age").value(dto.getAge()))
+                .andExpect(jsonPath("$.data.personalNumber").value(dto.getPersonalNumber()))
+                .andExpect(status().isCreated())
+                .andDo(this.rh.document(
+                        requestFields(requestConstrain.withPath("name").description("Request name, Not Blank"),
+                                requestConstrain.withPath("age").description("Request age, Not Blank"),
+                                requestConstrain.withPath("personalNumber").description("Request pn, Not Blank")
+                                ),
+                        responseFields(
+                                responseConstrain.withPath("data.id").description("new People's id, Not Blank and Positive"),
+                                responseConstrain.withPath("data.name").description("new People's name, Not Blank"),
+                                responseConstrain.withPath("data.age").description("new People's age, Not Blank and Positive"),
+                                responseConstrain.withPath("data.personalNumber").description("new People's pn, Not Blank and Length == 14"),
+                                fieldWithPath("status").description("Only SUCCESS Or ERROR"),
+                                fieldWithPath("time").description("Request Time in Korea Time"))));
     }
 
     private static class ConstrainedFields {
