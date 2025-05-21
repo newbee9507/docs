@@ -33,19 +33,18 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.restdocs.snippet.Attributes.key;
 
-@WebMvcTest(controllers = PeopleController.class)
+@WebMvcTest(controllers = DocsController.class)
 @ExtendWith(RestDocumentationExtension.class)
-class PeopleControllerTest {
+class DocsControllerTest {
 
     private MockMvc mockMvc;
     private RestDocumentationResultHandler rh;
 
     @MockitoBean
-    private PeopleQueryRepository QueryRepository;
-
-    @MockitoBean
     private PeopleRepository repository;
 
+    private final ConstrainedFields requestConstrain = new ConstrainedFields(PeopleDto.class);
+    private final ConstrainedFields responseConstrain = new ConstrainedFields(People.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final PeopleDto dto = new PeopleDto("홍길동", 50, "123456-9876543");
@@ -53,6 +52,7 @@ class PeopleControllerTest {
     @BeforeEach
     void setMockMvc(WebApplicationContext wc, RestDocumentationContextProvider rc) {
         this.rh = document("{class-name}/{method-name}",
+
                 preprocessRequest(prettyPrint()),
                 preprocessResponse(prettyPrint()));
 
@@ -66,7 +66,7 @@ class PeopleControllerTest {
     void info() throws Exception {
         given(repository.findById(anyLong())).willReturn(Optional.of(People.dtoToPeople(dto)));
 
-        mockMvc.perform(get("/api/people/info/{id}",1)
+        mockMvc.perform(get("/api/docs/info/{id}",1)
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.data.age").value(dto.getAge()))
@@ -86,11 +86,9 @@ class PeopleControllerTest {
     @Test
     void save() throws Exception{
         People people = People.dtoToPeople(dto);
-        ConstrainedFields requestConstrain = new ConstrainedFields(PeopleDto.class);
-        ConstrainedFields responseConstrain = new ConstrainedFields(People.class);
         given(repository.save(any())).willReturn(people);
 
-        mockMvc.perform(post("/api/people/save")
+        mockMvc.perform(post("/api/docs/save")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
@@ -118,11 +116,11 @@ class PeopleControllerTest {
         ConstrainedFields(Class<?> input) {
             this.constraintDescriptions = new ConstraintDescriptions(input);
         }
-
+    
         private FieldDescriptor withPath(String path) {
-            return fieldWithPath(path).attributes(key("constraints").value(StringUtils
-                    .collectionToDelimitedString(this.constraintDescriptions
-                            .descriptionsForProperty(path), ". ")));
+            return fieldWithPath(path).attributes(key("constraints")
+                    .value(StringUtils.collectionToDelimitedString(
+                            this.constraintDescriptions.descriptionsForProperty(path), ". ")));
         }
     }
 }
